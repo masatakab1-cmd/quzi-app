@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>難易度付きクイズ</title>
+<style>
+body { font-family: sans-serif; text-align: center; padding: 30px; }
+button { margin: 10px; padding: 10px 20px; font-size: 18px; }
+#question { font-size: 24px; margin-bottom: 10px; }
+#difficulty { font-size: 18px; color: #888; margin-bottom: 20px; }
+#result, #score { font-size: 20px; margin-top: 30px; }
+.explanation { font-size: 16px; margin-top: 10px; color: #555; }
+#nextBtn { display: none; margin-top: 20px; }
+#history { text-align: left; margin: 40px auto; max-width: 600px; background: #f9f9f9; padding: 20px; border-radius: 8px; }
+#history h3 { margin-top: 0; }
+ul { text-align: left; }
+</style>
+</head>
+<body>
+
+<div id="quiz-container">
+<div id="question"></div>
+<div id="difficulty"></div>
+<div id="choices"></div>
+<div id="result"></div>
+<button id="nextBtn" onclick="nextQuestion()">次の問題へ</button>
+</div>
+<div id="score" style="display:none;"></div>
+<div id="history"></div>
+
+<script>
+const quizData = [
+{
+question: "労働基準法第1条にいう、「人たるに値する生活」とは、社会の一般常識によって決まるものであるとされ、具体的には、「賃金の最低額を保障することによる最低限度の生活」をいう。",
+choices: ["〇(正)", "×(誤り)"],
+answer: "×(誤り)",
+explanation: "法1条にいう、「人たるに値する生活」とは、憲法25条1項の「健康で文化的な生活」を内容とするもので、具体的には、一般の社会通念によって決まるとされている。　したがって、本肢は誤り。",
+difficulty: "レベルC(正答率：75.1％)"
+},
+{
+question: "「労働基準法3条は労働者の信条によって賃金その他の労働条件につき差別することを禁じているが、特定の信条を有することを、雇入れを拒む理由として定めることも、右にいう労働条件に関する差別取扱として、右規定に違反するものと解される。」とするのが、最高裁判所の判例である。",
+choices: ["〇(正)", "×(誤り)"],
+answer: "×(誤り)",
+explanation: "「労働基準法三条は労働者の信条によつて賃金その他の労働条件につき差別することを禁じているが、これは、雇入れ後における労働条件についての制限であつて、雇入れそのものを制約する規定ではない」とするのが最高裁判所の判例である。したがって、本肢は誤り。",
+difficulty: "レベB(正答率：88.7％)"
+},
+{
+question: "事業場において女性労働者が平均的に能率が悪いこと、勤続年数が短いことが認められたため、男女間で異なる昇格基準を定めていることにより男女間で賃金格差が生じた場合には、労働基準法第4条違反とはならない。",
+choices: ["〇(正)", "×(誤り)"],
+answer: "×(誤り)",
+explanation: "法4条の「「女性であることを理由として」とは、労働者が女性であることのみを理由として、あるいは社会通念として又は当該事業場において女性労働者が一般的又は平均的に能率が悪いこと、勤続年数が短いこと、主たる生計の維持者ではないこと等を理由とすることの意であり、これらを理由として、女性労働者に対し賃金に差別をつけることは違法である」とされている。したがって、設問の場合には、法4条違反となる。",
+difficulty: "レベB(正答率：89.9％)"
+}
+];
+
+let currentQuestion = 0;
+let score = 0;
+let mistakeLog = [];
+let answered = false;
+
+function showQuestion() {
+const q = quizData[currentQuestion];
+document.getElementById("question").textContent = q.question;
+document.getElementById("difficulty").textContent = `難易度：${q.difficulty}`;
+const choicesDiv = document.getElementById("choices");
+choicesDiv.innerHTML = "";
+
+q.choices.forEach(choice => {
+const btn = document.createElement("button");
+btn.textContent = choice;
+btn.onclick = () => checkAnswer(choice);
+btn.disabled = false;
+choicesDiv.appendChild(btn);
+});
+
+document.getElementById("result").textContent = "";
+document.getElementById("nextBtn").style.display = "none";
+answered = false;
+}
+
+function checkAnswer(userAnswer) {
+if (answered) return;
+answered = true;
+
+const q = quizData[currentQuestion];
+const resultDiv = document.getElementById("result");
+resultDiv.innerHTML = "";
+
+if (userAnswer === q.answer) {
+resultDiv.innerHTML = `<span style="color:green;">正解！</span>`;
+score++;
+} else {
+resultDiv.innerHTML = `<span style="color:red;">不正解… 正解は「${q.answer}」</span>`;
+mistakeLog.push({
+question: q.question,
+selected: userAnswer,
+correct: q.answer,
+difficulty: q.difficulty
+});
+}
+
+const explanationDiv = document.createElement("div");
+explanationDiv.className = "explanation";
+explanationDiv.innerHTML = `
+難易度：${q.difficulty}<br>
+解説：${q.explanation}
+`;
+resultDiv.appendChild(explanationDiv);
+
+document.getElementById("nextBtn").style.display = "inline-block";
+Array.from(document.getElementById("choices").children).forEach(btn => btn.disabled = true);
+}
+
+function nextQuestion() {
+currentQuestion++;
+if (currentQuestion < quizData.length) {
+showQuestion();
+} else {
+showScore();
+}
+}
+
+function showScore() {
+document.getElementById("quiz-container").style.display = "none";
+const scoreDiv = document.getElementById("score");
+scoreDiv.style.display = "block";
+scoreDiv.innerHTML = `あなたの点数は ${score} / ${quizData.length} 点です！`;
+
+const history = JSON.parse(localStorage.getItem("quizHistory") || "[]");
+const today = new Date().toLocaleDateString();
+history.push({
+date: today,
+score: `${score}/${quizData.length}`,
+mistakes: mistakeLog
+});
+localStorage.setItem("quizHistory", JSON.stringify(history));
+
+showHistory();
+}
+
+function showHistory() {
+const historyData = JSON.parse(localStorage.getItem("quizHistory") || "[]");
+const historyDiv = document.getElementById("history");
+
+if (historyData.length === 0) return;
+
+historyDiv.innerHTML = "<h3>過去のスコア履歴</h3>";
+historyData.slice(-5).reverse().forEach((record) => {
+const div = document.createElement("div");
+div.innerHTML = `<strong>${record.date}：</strong>${record.score}`;
+
+if (record.mistakes.length > 0) {
+const ul = document.createElement("ul");
+record.mistakes.forEach(m => {
+const li = document.createElement("li");
+li.innerHTML = `
+<strong>Q:</strong> ${m.question}<br>
+難易度: ${m.difficulty}<br>
+あなたの答え: <em>${m.selected}</em><br>
+正解: <strong>${m.correct}</strong>
+`;
+ul.appendChild(li);
+});
+div.appendChild(ul);
+} else {
+div.innerHTML += "<p>全問正解🎉</p>";
+}
+
+historyDiv.appendChild(div);
+});
+}
+
+showQuestion();
+</script>
+</body>
+</html>
